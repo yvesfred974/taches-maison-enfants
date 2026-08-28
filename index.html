@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Suivi des Tâches Familiales</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800;900&display=swap');
+    :root { --primary: #3867D6; --bg: #F6F8FC; --card-bg: #FFFFFF; --text: #263238; --muted: #6B7280; --accent: #20BF6B; --border: #E2E8F0; --coral: #E85D75; --yellow: #F2B134; --teal: #12B5A4; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Nunito', sans-serif; }
+    html { scroll-behavior: smooth; }
+    body { background: linear-gradient(180deg, #EEF4FF 0, var(--bg) 280px); color: var(--text); padding: 16px 16px 96px; max-width: 600px; margin: 0 auto; }
+    header { text-align: left; margin: 10px 2px 24px; }
+    header h1 { font-size: 2rem; font-weight: 900; color: var(--primary); letter-spacing: 0; line-height: 1.05; }
+    header h1::before { content: '✦ '; color: var(--yellow); }
+    #current-date { font-size: 0.9rem; color: var(--muted); margin-top: 7px; text-transform: capitalize; font-weight: 700; }
+    .section { background: var(--card-bg); padding: 18px; border-radius: 22px; box-shadow: 0 6px 20px rgba(45, 65, 95, 0.08); margin-bottom: 18px; border: 1px solid var(--border); }
+    h2 { display: flex; align-items: center; gap: 9px; font-size: 1.16rem; margin-bottom: 15px; color: var(--text); font-weight: 900; }
+    .section-icon { display: grid; place-items: center; width: 35px; height: 35px; border-radius: 12px; font-size: 1.15rem; background: #FFF0C2; }
+    .inline-form { display: flex; gap: 9px; margin-bottom: 13px; flex-wrap: wrap; }
+    input[type="text"], select { flex: 1; min-height: 46px; padding: 10px 12px; border: 2px solid var(--border); border-radius: 13px; font-size: 1rem; color: var(--text); background: #FBFDFF; }
+    input[type="text"]:focus, select:focus, input:focus { outline: 3px solid rgba(108, 92, 231, 0.28); border-color: var(--primary); }
+    select { min-width: 145px; }
+    button { background: var(--primary); color: white; border: none; min-height: 46px; padding: 10px 16px; border-radius: 13px; cursor: pointer; font-weight: 900; font-size: 0.95rem; box-shadow: 0 3px 0 #4439A2; }
+    button:active { transform: translateY(2px); box-shadow: 0 1px 0 #4439A2; }
+    .children-tags { display: flex; gap: 8px; flex-wrap: wrap; }
+    .child-tag { background: #F0F6FF; color: var(--primary); padding: 8px 11px; border-radius: 14px; font-size: 0.95rem; display: flex; align-items: center; gap: 6px; border-left: 6px solid var(--child-color); font-weight: 800; }
+    .child-tag button { padding: 0 3px; background: none; color: #777; font-size: 1rem; }
+    .child-tag .delete-btn { color: #E74C3C; }
+    .child-color-input { width: 44px; height: 40px; padding: 3px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; }
+    .all-children { display: flex; align-items: center; gap: 6px; padding: 8px 4px; font-weight: bold; }
+    .children-checkboxes { display: flex; flex-wrap: wrap; gap: 8px; flex: 1; min-width: 180px; }
+    .child-checkbox { display: flex; align-items: center; gap: 5px; padding: 8px; border: 1px solid var(--border); border-radius: 8px; }
+    .child-checkbox input { width: 18px; height: 18px; accent-color: var(--child-color); }
+    .children-checkboxes.disabled { opacity: 0.5; }
+    .parent-panel { display: none; }
+    .parent-panel.open { display: block; }
+    .parent-toggle { width: 100%; margin-bottom: 18px; background: #FF9F43; box-shadow: 0 3px 0 #C66E18; }
+    .task-choice-list { display: grid; gap: 7px; flex-basis: 100%; }
+    .task-choice { display: flex; align-items: center; gap: 8px; padding: 10px; border: 2px solid var(--border); border-radius: 11px; background: #FBFDFF; font-weight: 800; }
+    .task-choice input, .assignment-checkbox input { width: 19px; height: 19px; accent-color: var(--primary); }
+    .task-assignments { display: grid; gap: 9px; flex-basis: 100%; }
+    .task-assignment { padding: 10px; border-radius: 12px; background: #FFF9F1; border: 2px solid #FFE8C7; }
+    .task-assignment-title { font-weight: 900; margin-bottom: 7px; }
+    .assignment-children { display: flex; flex-wrap: wrap; gap: 6px; }
+    .assignment-checkbox { display: flex; align-items: center; gap: 5px; padding: 5px 7px; border-radius: 8px; color: var(--assignment-color); background: #FFFFFF; }
+    .assignment-all { color: var(--primary); font-weight: 900; }
+    .task-template { flex-basis: 100%; }
+    .custom-task-list { display: flex; flex-wrap: wrap; gap: 6px; flex-basis: 100%; }
+    .custom-task-chip { display: flex; align-items: center; gap: 4px; padding: 5px 8px; border-radius: 9px; background: #EEF3FF; color: var(--primary); font-size: 0.85rem; font-weight: 800; }
+    .custom-task-chip button { min-height: 24px; padding: 0 5px; background: transparent; color: var(--coral); box-shadow: none; font-size: 1rem; }
+    .draft-tasks { display: grid; gap: 8px; flex-basis: 100%; }
+    .draft-task { display: flex; align-items: center; gap: 8px; padding: 9px; border-radius: 11px; background: #F5F8FF; border-left: 6px solid var(--draft-color); font-size: 0.9rem; }
+    .draft-task-info { flex: 1; }
+    .draft-task-info strong, .draft-task-info small { display: block; }
+    .draft-task-info small { color: #60717D; }
+    .draft-task-remove { min-height: 30px; padding: 3px 8px; background: transparent; color: var(--coral); box-shadow: none; }
+    .batch-actions { display: flex; gap: 8px; flex-basis: 100%; }
+    .vehicle-picker[hidden] { display: none; }
+    .task-item { background: #FFFFFF; border: 1px solid var(--border); border-left: 0; padding: 13px; border-radius: 17px; margin-bottom: 10px; cursor: default; display: flex; justify-content: space-between; align-items: center; overflow: hidden; box-shadow: 0 3px 12px rgba(45, 65, 95, 0.06); }
+    .task-color-bar { display: flex; align-self: stretch; width: 8px; flex-direction: column; margin: -10px 10px -10px -10px; }
+    .task-color { flex: 1; min-height: 4px; }
+    .delete-btn { color: #E74C3C; background: none; border: none; font-size: 1.1rem; cursor: pointer; }
+    .task-info { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+    .task-info strong { font-size: 1.05rem; overflow-wrap: anywhere; }
+    .task-info small { color: var(--muted); }
+    .task-child-name { font-weight: bold; }
+    .task-date { font-size: 0.8rem; color: var(--muted); }
+    .task-actions { display: flex; align-items: center; gap: 10px; }
+    .time-picker { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 145px; }
+    .time-picker select { min-width: 64px; text-align: center; font-size: 1rem; font-weight: bold; }
+    .time-separator { font-size: 1.2rem; font-weight: bold; }
+    .date-picker { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 250px; }
+    .date-picker select { min-width: 0; }
+    .complete-checkbox { width: 20px; height: 20px; accent-color: var(--accent); cursor: pointer; }
+    .completed-item { text-decoration: line-through; color: #888; background: #F2F5F7; border-left-color: var(--accent); }
+    .history-table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+    .history-table th, .history-table td { padding: 9px 5px; text-align: left; border-bottom: 1px solid var(--border); }
+    .history-table th { color: #65737E; font-size: 0.75rem; text-transform: uppercase; }
+    .history-count { font-weight: 900; color: var(--primary); text-align: center !important; }
+    .history-delete { min-height: 30px; padding: 3px 8px; background: transparent; color: var(--coral); box-shadow: none; font-size: 1.1rem; }
+    .history-empty { color: #7A8790; font-size: 0.9rem; text-align: center; padding: 10px; }
+    .history-month { border: 1px solid var(--border); border-radius: 14px; margin-bottom: 9px; overflow: hidden; background: #F8FAFC; }
+    .history-month summary { cursor: pointer; padding: 12px; font-weight: 900; color: var(--text); list-style-position: inside; }
+    .history-month summary::marker { color: var(--yellow); }
+    .history-month .history-table { background: #FFFFFF; }
+    .future-reminder { display: none; margin-top: 10px; padding: 10px; border-radius: 11px; background: #FFF3C4; color: #765B00; font-weight: 800; }
+    .performer-checkboxes { display: grid; gap: 8px; margin-bottom: 4px; }
+    .performer-checkbox { display: flex; align-items: center; gap: 8px; padding: 9px; border: 1px solid var(--border); border-radius: 9px; }
+    .performer-checkbox input { width: 18px; height: 18px; accent-color: var(--child-color); }
+    .code-modal { position: fixed; inset: 0; z-index: 10; background: rgba(0, 0, 0, 0.72); display: none; place-items: center; padding: 20px; }
+    .code-modal.is-visible { display: grid !important; visibility: visible !important; opacity: 1 !important; }
+    #code-modal { z-index: 9999; }
+    .code-dialog { width: min(100%, 340px); background: #FFFFFF; color: var(--text); padding: 22px; border-radius: 18px; border: 1px solid var(--border); box-shadow: 0 8px 30px rgba(0, 0, 0, 0.22); }
+    .code-dialog h2 { margin-bottom: 8px; }
+    .code-dialog p { margin-bottom: 14px; color: var(--muted); }
+    .code-dialog input { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 1.2rem; letter-spacing: 4px; text-align: center; color: var(--text); background: #FBFDFF; }
+    .code-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+    .cancel-code { background: #E9EDF3; color: #485465; box-shadow: 0 3px 0 #C9D0DA; }
+    .bottom-nav { position: fixed; z-index: 5; bottom: 14px; left: 50%; transform: translateX(-50%); width: min(calc(100% - 28px), 568px); display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; padding: 7px; border: 1px solid #DCE3EC; border-radius: 20px; background: rgba(255, 255, 255, 0.94); backdrop-filter: blur(16px); box-shadow: 0 8px 24px rgba(45,65,95,0.16); }
+    .bottom-nav a { color: var(--muted); text-decoration: none; text-align: center; padding: 8px 4px; border-radius: 14px; font-size: 0.76rem; font-weight: 900; }
+    .bottom-nav a:first-child { color: var(--primary); background: #EAF0FF; }
+    .bottom-nav a span { display: block; font-size: 1.15rem; margin-bottom: 2px; }
+    .child-color-input { box-shadow: 0 3px 0 rgba(38, 50, 56, 0.12); }
+    @media (max-width: 430px) {
+      body { padding: 12px 12px 94px; }
+      .section { padding: 15px; border-radius: 17px; }
+      .inline-form > input[type="text"], .inline-form > button { flex-basis: 100%; }
+      .date-picker, .time-picker { flex-basis: 100%; }
+      .date-picker select, .time-picker select { min-width: 0; }
+      .children-checkboxes { flex-basis: 100%; }
+      .child-checkbox { flex: 1; }
+      .bottom-nav { bottom: 9px; width: calc(100% - 20px); }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Tâches de la Maison</h1>
+    <div id="current-date"></div>
+  </header>
+
+  <!-- Gestion des enfants -->
+  <button type="button" class="parent-toggle" data-panel="children-panel" data-label="enfant">🔒 Ouvrir la gestion (enfant)</button>
+  <section class="section parent-panel" id="children-panel">
+    <h2><span class="section-icon">🌈</span>Enfants</h2>
+    <div class="inline-form">
+      <input type="text" id="child-name" placeholder="Prénom de l'enfant...">
+      <input type="color" id="child-color" class="child-color-input" value="#4A90E2" aria-label="Couleur de l'enfant">
+      <button onclick="addChild()">Ajouter</button>
+    </div>
+    <div id="children-list" class="children-tags"></div>
+  </section>
+
+  <!-- Gestion des tâches -->
+  <button type="button" class="parent-toggle" data-panel="tasks-panel" data-label="taches">🔒 Ouvrir la gestion (taches)</button>
+  <section class="section parent-panel" id="tasks-panel">
+    <h2><span class="section-icon">✨</span>Créer une tâche</h2>
+    <div class="inline-form">
+      <div id="task-template" class="task-choice-list" aria-label="Choisir les tâches"></div>
+      <input type="text" id="task-title" class="task-template" placeholder="Nom de l'autre tâche..." disabled>
+      <label class="task-choice"><input type="checkbox" id="other-task"> Autre tâche</label>
+      <div id="custom-task-list" class="custom-task-list" aria-label="Tâches personnalisées"></div>
+      <div id="task-assignments" class="task-assignments" aria-label="Affectation des tâches"></div>
+      <div class="date-picker" aria-label="Date de la tâche, jour mois année">
+        <select id="task-due-day-number" aria-label="Jour" required></select>
+        <select id="task-due-month" aria-label="Mois" required></select>
+        <select id="task-due-year" aria-label="Année" required></select>
+      </div>
+      <div class="time-picker" aria-label="Heure de la tâche, format 24 heures">
+        <select id="task-due-hour" aria-label="Heure"></select>
+        <span class="time-separator">:</span>
+        <select id="task-due-minute" aria-label="Minutes">
+          <option value="">--</option>
+          <option value="00">00</option>
+          <option value="30">30</option>
+        </select>
+      </div>
+      <div class="batch-actions">
+        <button type="button" onclick="createTasks()">Créer les tâches</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tâches à faire -->
+  <section class="section" id="today-panel">
+    <h2><span class="section-icon">🚀</span>À faire aujourd'hui</h2>
+    <div id="pending-tasks"></div>
+    <div id="future-reminder" class="future-reminder"></div>
+  </section>
+
+  <!-- Tâches terminées -->
+  <section class="section" id="completed-panel">
+    <h2><span class="section-icon">🏆</span>Terminées</h2>
+    <div id="completed-tasks"></div>
+  </section>
+
+  <section class="section" id="history-panel">
+    <h2><span class="section-icon">📊</span>Historique</h2>
+    <div id="history-content" class="history-empty">Aucune tâche réalisée pour le moment.</div>
+  </section>
+
+  <div id="code-modal" class="code-modal" hidden>
+    <form id="code-form" class="code-dialog">
+      <h2>Code requis</h2>
+      <p>Entre le code pour continuer.</p>
+      <input id="access-code" type="password" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" autocomplete="off" aria-label="Code d'accès" required>
+      <div class="code-actions">
+        <button type="button" class="cancel-code" id="cancel-code">Annuler</button>
+        <button type="submit">Valider</button>
+      </div>
+    </form>
+  </div>
+
+  <div id="child-edit-modal" class="code-modal" hidden>
+    <form id="child-edit-form" class="code-dialog">
+      <h2>Modifier l'enfant</h2>
+      <input id="edit-child-name" type="text" placeholder="Prénom de l'enfant" aria-label="Prénom de l'enfant" required>
+      <input id="edit-child-color" type="color" class="child-color-input" aria-label="Couleur de l'enfant" required>
+      <div class="code-actions">
+        <button type="button" class="cancel-code" id="cancel-child-edit">Annuler</button>
+        <button type="submit">Enregistrer</button>
+      </div>
+    </form>
+  </div>
+
+  <div id="performer-modal" class="code-modal" hidden>
+    <form id="performer-form" class="code-dialog">
+      <h2>Qui a fait la tâche ?</h2>
+      <p>Coche le ou les enfants qui l’ont réalisée.</p>
+      <div id="performer-select" class="performer-checkboxes" aria-label="Enfants ayant réalisé la tâche"></div>
+      <div class="code-actions">
+        <button type="button" class="cancel-code" id="cancel-performer">Annuler</button>
+        <button type="submit">Valider</button>
+      </div>
+    </form>
+  </div>
+
+  <nav class="bottom-nav" aria-label="Navigation principale">
+    <a href="#today-panel"><span>⚡</span>Aujourd'hui</a>
+    <a href="#history-panel"><span>📈</span>Historique</a>
+    <a href="#children-panel"><span>⚙️</span>Parents</a>
+  </nav>
+
+  <!-- Script Firebase -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, onValue, push, ref, remove, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyC8OmZ1o5ud19huyIIte-DinEgQAdT5HxQ",
+      authDomain: "taches-maison-enfants.firebaseapp.com",
+      databaseURL: "https://taches-maison-enfants-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "taches-maison-enfants",
+      storageBucket: "taches-maison-enfants.firebasestorage.app",
+      messagingSenderId: "189636673395",
+      appId: "1:189636673395:web:c39151cc58839607b94f06"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // Date du jour
+    const getDateKey = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    const today = new Date();
+    const todayKey = getDateKey(today);
+    const childColors = new Map();
+    const childrenById = new Map();
+    const defaultTasks = [
+      'Aspirateur Cuisine', 'Aspirateur en haut', 'Aspirateur Salon', 'Chambres',
+      'Lave-vaisselle', 'Nettoyer évier', 'Nettoyer voiture', 'Poules',
+      'Ranger salon', 'Ranger vaiselle évier', 'Salle de bain Bas',
+      'Salle de bain Haut', 'Toilette Bas', 'Toilette Haut', 'Vider poubelles'
+    ].sort((firstTask, secondTask) => firstTask.localeCompare(secondTask, 'fr'));
+    const taskTemplate = document.getElementById('task-template');
+    const customTaskList = document.getElementById('custom-task-list');
+    const taskAssignments = document.getElementById('task-assignments');
+    const otherTaskInput = document.getElementById('other-task');
+    const customTasksById = new Map();
+    const renderTaskTemplates = (customTasks = []) => {
+      const allTasks = [...defaultTasks, ...customTasks
+        .sort((firstTask, secondTask) => firstTask.title.localeCompare(secondTask.title, 'fr'))
+        .map(task => task.title)];
+      taskTemplate.innerHTML = allTasks.map((task, index) => `
+        <label class="task-choice"><input type="checkbox" class="task-choice-input" value="${task}" id="task-choice-${index}">${task}</label>
+      `).join('');
+      customTaskList.innerHTML = customTasks.map(task => `
+        <span class="custom-task-chip">${task.title}
+          <button type="button" onclick="deleteTaskTemplate('${task.id}')" aria-label="Supprimer la tâche ${task.title}">&times;</button>
+        </span>
+      `).join('');
+      taskTemplate.querySelectorAll('.task-choice-input').forEach(input => input.addEventListener('change', renderTaskAssignments));
+    };
+    const renderTaskAssignments = () => {
+      const selectedTitles = [...taskTemplate.querySelectorAll('.task-choice-input:checked')].map(input => input.value);
+      if (otherTaskInput.checked && document.getElementById('task-title').value.trim()) {
+        selectedTitles.push(document.getElementById('task-title').value.trim());
+      }
+      taskAssignments.innerHTML = selectedTitles.map((title, index) => `
+        <div class="task-assignment" data-task-title="${title}">
+          <div class="task-assignment-title">${title}</div>
+          ${title === 'Nettoyer voiture' ? `<select class="assignment-vehicle" aria-label="Voiture pour ${title}"><option value="">Choisir une voiture</option><option>Zoé</option><option>R5</option><option>Picasso</option><option>C3</option></select>` : ''}
+          <div class="assignment-children">
+            <label class="assignment-checkbox assignment-all"><input type="checkbox" class="assignment-all-input"> Tous</label>
+            ${[...childColors.entries()].map(([name, color]) => `<label class="assignment-checkbox" style="--assignment-color: ${color}"><input type="checkbox" class="assignment-child-input" value="${name}" data-color="${color}">${name}</label>`).join('')}
+          </div>
+        </div>
+      `).join('');
+      taskAssignments.querySelectorAll('.assignment-all-input').forEach((allInput) => {
+        allInput.addEventListener('change', () => {
+          const assignment = allInput.closest('.task-assignment');
+          assignment.querySelectorAll('.assignment-child-input').forEach((childInput) => {
+            childInput.checked = allInput.checked;
+          });
+        });
+      });
+    };
+    otherTaskInput.addEventListener('change', () => {
+      document.getElementById('task-title').disabled = !otherTaskInput.checked;
+      renderTaskAssignments();
+    });
+    document.getElementById('task-title').addEventListener('input', renderTaskAssignments);
+    renderTaskTemplates();
+
+    onValue(ref(db, "taskTemplates"), (snapshot) => {
+      const customTasks = Object.entries(snapshot.val() || {}).map(([id, task]) => ({ id, ...task }));
+      customTasksById.clear();
+      customTasks.forEach(task => customTasksById.set(task.id, task));
+      renderTaskTemplates(customTasks);
+    });
+    const monthNames = [
+      'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+      'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'
+    ];
+
+    const daySelect = document.getElementById('task-due-day-number');
+    const monthSelect = document.getElementById('task-due-month');
+    const yearSelect = document.getElementById('task-due-year');
+    daySelect.innerHTML = '<option value="">Jour</option>';
+    monthSelect.innerHTML = '<option value="">Mois</option>';
+    yearSelect.innerHTML = '<option value="">Année</option>';
+    for (let day = 1; day <= 31; day += 1) {
+      const formattedDay = String(day).padStart(2, '0');
+      daySelect.innerHTML += `<option value="${formattedDay}">${formattedDay}</option>`;
+    }
+    monthNames.forEach((month, index) => {
+      const monthNumber = String(index + 1).padStart(2, '0');
+      monthSelect.innerHTML += `<option value="${monthNumber}">${month}</option>`;
+    });
+    for (let year = today.getFullYear(); year <= today.getFullYear() + 5; year += 1) {
+      yearSelect.innerHTML += `<option value="${year}">${year}</option>`;
+    }
+    daySelect.value = String(today.getDate()).padStart(2, '0');
+    monthSelect.value = String(today.getMonth() + 1).padStart(2, '0');
+    yearSelect.value = String(today.getFullYear());
+
+    document.getElementById('current-date').textContent = today.toLocaleDateString('fr-FR', {
+      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+    });
+
+    const hourSelect = document.getElementById('task-due-hour');
+    hourSelect.innerHTML = '<option value="">--</option>';
+    for (let hour = 0; hour < 24; hour += 1) {
+      const formattedHour = String(hour).padStart(2, '0');
+      hourSelect.innerHTML += `<option value="${formattedHour}">${formattedHour}</option>`;
+    }
+
+    const formatTaskDate = (dateValue) => {
+      if (!dateValue) return 'Date non définie';
+      const date = dateValue.toDate ? dateValue.toDate() : new Date(dateValue);
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      return `${date.toLocaleDateString('fr-FR')} à ${hours}h${minutes}`;
+    };
+
+    const formatTaskDay = (dayValue) => {
+      if (!dayValue) return 'Date non définie';
+      return new Date(`${dayValue}T00:00:00`).toLocaleDateString('fr-FR');
+    };
+
+    const isCompletedToday = (task) => {
+      if (!task.completed || !task.completedAt) return false;
+      const completedDate = task.completedAt.toDate ? task.completedAt.toDate() : new Date(task.completedAt);
+      return getDateKey(completedDate) === todayKey;
+    };
+
+    const millisecondsUntilMidnight = new Date(
+      today.getFullYear(), today.getMonth(), today.getDate() + 1
+    ).getTime() - today.getTime();
+    setTimeout(() => window.location.reload(), millisecondsUntilMidnight);
+
+    const ACCESS_CODE = '0410';
+    const codeModal = document.getElementById('code-modal');
+    const codeForm = document.getElementById('code-form');
+    const accessCodeInput = document.getElementById('access-code');
+    let resolveCodeRequest;
+    const parentAccessPanels = new Set();
+
+    const hasAccessCode = () => new Promise((resolve) => {
+      resolveCodeRequest = resolve;
+      codeForm.reset();
+      codeModal.removeAttribute('hidden');
+      codeModal.classList.add('is-visible');
+      accessCodeInput.focus();
+    });
+
+    codeForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      codeModal.classList.remove('is-visible');
+      codeModal.setAttribute('hidden', '');
+      resolveCodeRequest(accessCodeInput.value === ACCESS_CODE);
+    });
+
+    document.getElementById('cancel-code').addEventListener('click', () => {
+      codeModal.classList.remove('is-visible');
+      codeModal.setAttribute('hidden', '');
+      resolveCodeRequest(false);
+    });
+
+    document.querySelectorAll('.parent-toggle').forEach((toggle) => {
+      toggle.addEventListener('click', async () => {
+        const panel = document.getElementById(toggle.dataset.panel);
+        if (panel.classList.contains('open')) {
+          panel.classList.remove('open');
+          parentAccessPanels.delete(toggle.dataset.panel);
+          toggle.textContent = `🔒 Ouvrir la gestion (${toggle.dataset.label})`;
+          return;
+        }
+        if (!await hasAccessCode()) return;
+        parentAccessPanels.add(toggle.dataset.panel);
+        panel.classList.toggle('open');
+        toggle.textContent = panel.classList.contains('open')
+          ? `🔓 Fermer la gestion (${toggle.dataset.label})`
+          : `🔒 Ouvrir la gestion (${toggle.dataset.label})`;
+      });
+    });
+    document.querySelector('.bottom-nav a[href="#children-panel"]').addEventListener('click', (event) => {
+      event.preventDefault();
+      document.querySelector('.parent-toggle[data-panel="children-panel"]').click();
+    });
+
+    const performerModal = document.getElementById('performer-modal');
+    const performerForm = document.getElementById('performer-form');
+    const performerSelect = document.getElementById('performer-select');
+    let resolvePerformerRequest;
+
+    const choosePerformer = (children) => new Promise((resolve) => {
+      resolvePerformerRequest = resolve;
+      performerSelect.innerHTML = children.map(child => `
+        <label class="performer-checkbox" style="--child-color: ${child.color || '#4A90E2'}">
+          <input type="checkbox" value="${child.name}" data-color="${child.color || '#4A90E2'}">
+          <span style="color: ${child.color || '#4A90E2'}">${child.name}</span>
+        </label>
+      `).join('');
+      performerModal.removeAttribute('hidden');
+      performerModal.classList.add('is-visible');
+      performerSelect.querySelector('input')?.focus();
+    });
+
+    performerForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      performerModal.classList.remove('is-visible');
+      performerModal.setAttribute('hidden', '');
+      const selectedPerformers = [...performerSelect.querySelectorAll('input:checked')]
+        .map(input => ({ name: input.value, color: input.dataset.color }));
+      resolvePerformerRequest(selectedPerformers);
+    });
+
+    document.getElementById('cancel-performer').addEventListener('click', () => {
+      performerModal.classList.remove('is-visible');
+      performerModal.setAttribute('hidden', '');
+      resolvePerformerRequest(null);
+    });
+
+    // ÉCOUTE EN TEMPS RÉEL : ENFANTS
+    onValue(ref(db, "children"), (snapshot) => {
+      const list = document.getElementById('children-list');
+      list.innerHTML = '';
+      childrenById.clear();
+
+      Object.entries(snapshot.val() || {}).forEach(([childId, child]) => {
+        const color = child.color || '#4A90E2';
+        childColors.set(child.name, color);
+        childrenById.set(childId, child);
+        list.innerHTML += `<div class="child-tag" style="--child-color: ${color}">${child.name} <button type="button" onclick="editChild('${childId}')" aria-label="Modifier ${child.name}">&#9998;</button><button type="button" class="delete-btn" onclick="deleteChild('${childId}')" aria-label="Supprimer ${child.name}">&times;</button></div>`;
+      });
+      renderTaskAssignments();
+    });
+
+    // ÉCOUTE EN TEMPS RÉEL : TÂCHES
+    const tasksById = new Map();
+    const archivingTasks = new Set();
+    const archiveOverdueTask = async (taskId, task) => {
+      if (task.archived || task.completed || archivingTasks.has(taskId) || !task.dueDay || task.dueDay >= todayKey) return;
+      archivingTasks.add(taskId);
+      const assignedChildren = task.children || (task.child ? [{ name: task.child }] : []);
+      const completedChildren = task.completedBy || [];
+      const remainingChildren = assignedChildren.filter(child => !completedChildren.some(doneChild => doneChild.name === child.name));
+      const overdueChildren = remainingChildren.length ? remainingChildren : [{ name: 'Non attribuée', color: '#4A90E2' }];
+      const archivedAt = Date.now();
+      try {
+        await Promise.all(overdueChildren.map(child => push(ref(db, "history"), {
+          taskId,
+          taskTitle: task.title,
+          childName: child.name,
+          childColor: child.color || '#4A90E2',
+          status: 'non-effectue',
+          completedAt: archivedAt
+        })));
+        await update(ref(db, `tasks/${taskId}`), { archived: true, archivedAt });
+      } finally {
+        archivingTasks.delete(taskId);
+      }
+    };
+    onValue(ref(db, "tasks"), (snapshot) => {
+      const pendingContainer = document.getElementById('pending-tasks');
+      const completedContainer = document.getElementById('completed-tasks');
+      pendingContainer.innerHTML = '';
+      completedContainer.innerHTML = '';
+      let futureTaskCount = 0;
+
+      Object.entries(snapshot.val() || {}).forEach(([taskId, task]) => {
+        tasksById.set(taskId, task);
+
+        archiveOverdueTask(taskId, task);
+
+        if (!task.completed && task.dueDay && task.dueDay > todayKey) {
+          futureTaskCount += 1;
+          return;
+        }
+        if (!task.completed && task.dueDay && task.dueDay < todayKey) return;
+
+        // Les tâches terminées restent visibles barrées jusqu'au prochain jour.
+        if (task.archived || task.completed && !isCompletedToday(task)) return;
+
+        const el = document.createElement('div');
+        el.className = `task-item ${task.completed ? 'completed-item' : ''}`;
+        const assignedChildren = task.children || (task.child ? [{ name: task.child, color: childColors.get(task.child) || '#4A90E2' }] : []);
+        const completedChildren = task.completedBy || [];
+        const taskChildren = task.completed
+          ? completedChildren
+          : assignedChildren.filter(child => !completedChildren.some(doneChild => doneChild.name === child.name));
+        const taskColors = taskChildren.map(child => child.color || '#4A90E2');
+        const colorBar = taskColors.map(color => `<span class="task-color" style="background-color: ${color}"></span>`).join('');
+
+        el.innerHTML = `
+          <div class="task-color-bar" aria-hidden="true">${colorBar}</div>
+          <div class="task-info">
+            <strong>${task.title}${task.vehicle ? ` (${task.vehicle})` : ''}</strong>
+            <small>${task.completed ? 'Fait par' : 'Pour'} : ${taskChildren.map(child => `<span class="task-child-name" style="color: ${child.color || '#4A90E2'}">${child.name}</span>`).join(', ') || 'Non attribuée'}</small>
+            <span class="task-date">Prévue le ${task.dueAt ? formatTaskDate(task.dueAt) : formatTaskDay(task.dueDay)}</span>
+          </div>
+          <div class="task-actions">
+            <input class="complete-checkbox" type="checkbox" ${task.completed ? 'checked' : ''}
+              onchange="completeTask('${taskId}', this.checked)" aria-label="Tâche terminée">
+            <button class="delete-btn" onclick="deleteTask('${taskId}')" aria-label="Supprimer la tâche">&times;</button>
+          </div>
+        `;
+
+        if (task.completed) {
+          completedContainer.appendChild(el);
+        } else {
+          pendingContainer.appendChild(el);
+        }
+      });
+      const futureReminder = document.getElementById('future-reminder');
+      futureReminder.style.display = futureTaskCount ? 'block' : 'none';
+      futureReminder.textContent = futureTaskCount
+        ? `${futureTaskCount} tâche${futureTaskCount > 1 ? 's' : ''} prévue${futureTaskCount > 1 ? 's' : ''} pour un autre jour apparaîtra${futureTaskCount > 1 ? 'ont' : ''} à la bonne date.`
+        : '';
+    });
+
+    onValue(ref(db, "history"), (snapshot) => {
+      const historyContent = document.getElementById('history-content');
+      const totals = new Map();
+      Object.entries(snapshot.val() || {}).forEach(([historyId, entry]) => {
+        const completedDate = entry.completedAt ? new Date(entry.completedAt) : new Date();
+        const monthKey = `${completedDate.getFullYear()}-${String(completedDate.getMonth() + 1).padStart(2, '0')}`;
+        const key = `${monthKey}|${entry.childName}|${entry.taskTitle}|${entry.status || 'effectue'}`;
+        const current = totals.get(key);
+        if (!current || completedDate.getTime() > new Date(current.completedAt || 0).getTime()) {
+          totals.set(key, { ...entry, historyId, monthKey, count: (current?.count || 0) + 1 });
+        } else {
+          current.count += 1;
+        }
+      });
+
+      if (!totals.size) {
+        historyContent.className = 'history-empty';
+        historyContent.textContent = 'Aucune tâche réalisée pour le moment.';
+        return;
+      }
+
+      historyContent.className = '';
+      const currentMonthKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+      const monthGroups = new Map();
+      [...totals.values()].forEach((entry) => {
+        if (!monthGroups.has(entry.monthKey)) monthGroups.set(entry.monthKey, []);
+        monthGroups.get(entry.monthKey).push(entry);
+      });
+      historyContent.innerHTML = [...monthGroups.entries()]
+        .sort(([firstMonth], [secondMonth]) => secondMonth.localeCompare(firstMonth))
+        .map(([monthKey, entries]) => {
+          const monthDate = new Date(`${monthKey}-01T00:00:00`);
+          const monthLabel = monthDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+          return `
+            <details class="history-month" ${monthKey === currentMonthKey ? 'open' : ''}>
+              <summary>${monthLabel}</summary>
+              <table class="history-table">
+                <thead><tr><th>Enfant</th><th>Tâche</th><th>Résultat</th><th>Dernière fois</th><th>Fois</th><th></th></tr></thead>
+                <tbody>${entries.map(entry => `
+                  <tr><td>${entry.childName}</td><td>${entry.taskTitle}</td><td>${entry.status === 'non-effectue' ? 'NON EFFECTUÉ' : 'Effectué'}</td><td>${formatTaskDate(entry.completedAt)}</td><td class="history-count">${entry.count}</td><td><button class="history-delete" onclick="deleteHistory('${entry.historyId}')" aria-label="Supprimer cette entrée de l'historique">&times;</button></td></tr>
+                `).join('')}</tbody>
+              </table>
+            </details>
+          `;
+        }).join('');
+    });
+
+    // ACTIONS BASE DE DONNÉES
+    window.addChild = async () => {
+      const input = document.getElementById('child-name');
+      const colorInput = document.getElementById('child-color');
+      if (input.value.trim() && parentAccessPanels.has('children-panel')) {
+        await push(ref(db, "children"), { name: input.value.trim(), color: colorInput.value });
+        input.value = '';
+        colorInput.value = '#4A90E2';
+      }
+    };
+
+    window.deleteChild = async (id) => {
+      if (parentAccessPanels.has('children-panel')) {
+        await remove(ref(db, `children/${id}`));
+      }
+    };
+
+    const childEditModal = document.getElementById('child-edit-modal');
+    const childEditForm = document.getElementById('child-edit-form');
+    let childBeingEdited;
+
+    window.editChild = (id) => {
+      const child = childrenById.get(id);
+      if (!child) return;
+      childBeingEdited = id;
+      document.getElementById('edit-child-name').value = child.name;
+      document.getElementById('edit-child-color').value = child.color || '#4A90E2';
+      childEditModal.removeAttribute('hidden');
+      childEditModal.classList.add('is-visible');
+      document.getElementById('edit-child-name').focus();
+    };
+
+    childEditForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!parentAccessPanels.has('children-panel')) return;
+      const updatedName = document.getElementById('edit-child-name').value.trim();
+      const updatedColor = document.getElementById('edit-child-color').value;
+      childEditModal.classList.remove('is-visible');
+      childEditModal.setAttribute('hidden', '');
+      await update(ref(db, `children/${childBeingEdited}`), {
+        name: updatedName,
+        color: updatedColor
+      });
+    });
+
+    document.getElementById('cancel-child-edit').addEventListener('click', () => {
+      childEditModal.classList.remove('is-visible');
+      childEditModal.setAttribute('hidden', '');
+    });
+
+    window.createTasks = async () => {
+      const customTitleInput = document.getElementById('task-title');
+      const dueHourInput = document.getElementById('task-due-hour');
+      const dueMinuteInput = document.getElementById('task-due-minute');
+      const hasHour = dueHourInput.value && dueMinuteInput.value;
+      const hasPartialHour = dueHourInput.value || dueMinuteInput.value;
+      const dueDay = `${yearSelect.value}-${monthSelect.value}-${daySelect.value}`;
+      const selectedTitles = [...taskTemplate.querySelectorAll('.task-choice-input:checked')].map(input => input.value);
+      if (otherTaskInput.checked && customTitleInput.value.trim()) selectedTitles.push(customTitleInput.value.trim());
+      const isValidDate = new Date(`${dueDay}T00:00:00`).getDate() === Number(daySelect.value);
+      if (!selectedTitles.length || !isValidDate || (hasPartialHour && !hasHour)) return;
+      const tasks = [...taskAssignments.querySelectorAll('.task-assignment')];
+      if (tasks.length !== selectedTitles.length) return;
+      if (!tasks.every(task => task.querySelectorAll('.assignment-child-input:checked').length)) return;
+      if (tasks.some(task => task.dataset.taskTitle === 'Nettoyer voiture'
+        && !task.querySelector('.assignment-vehicle')?.value)) return;
+      if (!parentAccessPanels.has('tasks-panel')) return;
+      for (const assignment of tasks) {
+        const title = assignment.dataset.taskTitle;
+        const isCustomTask = !defaultTasks.includes(title);
+        if (isCustomTask && ![...customTasksById.values()].some(template => template.title === title)) {
+          await push(ref(db, "taskTemplates"), { title });
+        }
+        const vehicle = assignment.querySelector('.assignment-vehicle')?.value || null;
+        await push(ref(db, "tasks"), {
+          title,
+          vehicle,
+          children: [...assignment.querySelectorAll('.assignment-child-input:checked')].map(input => ({ name: input.value, color: input.dataset.color })),
+          dueDay,
+          dueAt: hasHour ? new Date(`${dueDay}T${dueHourInput.value}:${dueMinuteInput.value}`).getTime() : null,
+          completed: false,
+          createdAt: Date.now()
+        });
+      }
+      taskTemplate.querySelectorAll('input').forEach(input => { input.checked = false; });
+      otherTaskInput.checked = false;
+      customTitleInput.value = '';
+      renderTaskAssignments();
+    };
+
+    window.deleteTask = async (id) => {
+      if (await hasAccessCode()) {
+        await remove(ref(db, `tasks/${id}`));
+      }
+    };
+
+    window.deleteTaskTemplate = async (id) => {
+      if (parentAccessPanels.has('tasks-panel')) {
+        await remove(ref(db, `taskTemplates/${id}`));
+        const deletedTitle = customTasksById.get(id)?.title;
+        taskTemplate.querySelectorAll('.task-choice-input').forEach((input) => {
+          if (input.value === deletedTitle) input.checked = false;
+        });
+        renderTaskAssignments();
+      }
+    };
+
+    window.deleteHistory = async (id) => {
+      if (await hasAccessCode()) {
+        await remove(ref(db, `history/${id}`));
+      }
+    };
+
+    window.completeTask = async (id, completed) => {
+      const task = tasksById.get(id);
+      if (completed && task) {
+        const children = task.children || (task.child ? [{ name: task.child }] : []);
+        const alreadyCompleted = task.completedBy || [];
+        const remainingChildren = children.filter(child => !alreadyCompleted.some(doneChild => doneChild.name === child.name));
+        const performers = remainingChildren.length > 1
+          ? await choosePerformer(remainingChildren)
+          : remainingChildren.length === 1
+            ? [{ name: remainingChildren[0].name, color: remainingChildren[0].color || childColors.get(remainingChildren[0].name) || '#4A90E2' }]
+            : [{ name: 'Non attribuée', color: '#4A90E2' }];
+        if (!performers.length) return;
+        const completedChildren = [...alreadyCompleted, ...performers];
+        const completedAt = new Date();
+        const isBedroomTask = task.title === 'Chambres';
+        const isFullyCompleted = !isBedroomTask || completedChildren.length >= children.length;
+        await update(ref(db, `tasks/${id}`), {
+          completed: isFullyCompleted,
+          completedAt: isFullyCompleted ? completedAt.getTime() : null,
+          completedBy: completedChildren
+        });
+        try {
+          await Promise.all(performers.map(performer => push(ref(db, "history"), {
+            taskId: id,
+            taskTitle: task.title,
+            childName: performer.name,
+            childColor: performer.color,
+            status: 'effectue',
+            completedAt: completedAt.getTime()
+          })));
+        } catch (error) {
+          console.error('Impossible d\'enregistrer l\'historique :', error);
+        }
+        return;
+      }
+      await update(ref(db, `tasks/${id}`), {
+        completed,
+        completedAt: completed ? Date.now() : null,
+        completedBy: completed ? (tasksById.get(id)?.completedBy || []) : []
+      });
+    };
+  </script>
+</body>
+</html>
