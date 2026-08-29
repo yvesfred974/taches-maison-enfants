@@ -70,8 +70,9 @@
     .time-picker { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 145px; }
     .time-picker select { min-width: 64px; text-align: center; font-size: 1rem; font-weight: bold; }
     .time-separator { font-size: 1.2rem; font-weight: bold; }
-    .date-picker { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 250px; }
+        .date-picker { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 250px; }
     .date-picker select { min-width: 0; }
+    .task-done-label { display: inline-flex; align-items: center; gap: 7px; font-weight: 900; color: var(--muted); }
     .complete-checkbox { width: 20px; height: 20px; accent-color: var(--accent); cursor: pointer; }
     .completed-item { text-decoration: line-through; color: #888; background: #F2F5F7; border-left-color: var(--accent); }
     .history-table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
@@ -97,6 +98,10 @@
     .code-dialog input { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 1.2rem; letter-spacing: 4px; text-align: center; color: var(--text); background: #FBFDFF; }
     .code-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
     .cancel-code { background: #E9EDF3; color: #485465; box-shadow: 0 3px 0 #C9D0DA; }
+    .danger-warning { border: 2px solid rgba(232, 93, 117, 0.2); background: linear-gradient(180deg, #FFF8FA 0%, #FFFFFF 100%); }
+    .danger-warning h2 { color: #B83D57; }
+    .danger-warning .code-actions button:last-child { background: var(--coral); box-shadow: 0 3px 0 #B93954; }
+    .danger-warning .code-actions button:last-child:hover { filter: brightness(1.02); }
     .bottom-nav { position: fixed; z-index: 5; bottom: 14px; left: 50%; transform: translateX(-50%); width: min(calc(100% - 28px), 568px); display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; padding: 7px; border: 1px solid #DCE3EC; border-radius: 20px; background: rgba(255, 255, 255, 0.94); backdrop-filter: blur(16px); box-shadow: 0 8px 24px rgba(45,65,95,0.16); }
     .bottom-nav a { color: var(--muted); text-decoration: none; text-align: center; padding: 8px 4px; border-radius: 14px; font-size: 0.76rem; font-weight: 900; }
     .bottom-nav a:first-child { color: var(--primary); background: #EAF0FF; }
@@ -217,6 +222,17 @@
     </form>
   </div>
 
+  <div id="confirm-reset-modal" class="code-modal" hidden>
+    <div class="code-dialog danger-warning">
+      <h2>⚠️ Annuler la tâche</h2>
+      <p id="confirm-reset-message">Cette tâche est déjà marquée comme faite. Voulez-vous vraiment l’annuler et supprimer son historique ?</p>
+      <div class="code-actions">
+        <button type="button" class="cancel-code" id="cancel-reset-confirm">Non</button>
+        <button type="button" id="confirm-reset-accept">Oui</button>
+      </div>
+    </div>
+  </div>
+
   <nav class="bottom-nav" aria-label="Navigation principale">
     <a href="#today-panel"><span>⚡</span>Aujourd'hui</a>
     <a href="#history-panel"><span>📈</span>Historique</a>
@@ -226,7 +242,7 @@
   <!-- Script Firebase -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getDatabase, onValue, push, ref, remove, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    import { get, getDatabase, onValue, push, ref, remove, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyC8OmZ1o5ud19huyIIte-DinEgQAdT5HxQ",
@@ -429,16 +445,68 @@
     const performerModal = document.getElementById('performer-modal');
     const performerForm = document.getElementById('performer-form');
     const performerSelect = document.getElementById('performer-select');
+    const confirmResetModal = document.getElementById('confirm-reset-modal');
+    const confirmResetMessage = document.getElementById('confirm-reset-message');
     let resolvePerformerRequest;
+    let resolveConfirmResetRequest;
 
-    const choosePerformer = (children) => new Promise((resolve) => {
+    const requestResetConfirmation = (message) => new Promise((resolve) => {
+      resolveConfirmResetRequest = resolve;
+      confirmResetMessage.textContent = message;
+      confirmResetModal.removeAttribute('hidden');
+      confirmResetModal.classList.add('is-visible');
+    });
+
+    document.getElementById('cancel-reset-confirm').addEventListener('click', () => {
+      confirmResetModal.classList.remove('is-visible');
+      confirmResetModal.setAttribute('hidden', '');
+      resolveConfirmResetRequest(false);
+    });
+
+    document.getElementById('confirm-reset-accept').addEventListener('click', () => {
+      confirmResetModal.classList.remove('is-visible');
+      confirmResetModal.setAttribute('hidden', '');
+      resolveConfirmResetRequest(true);
+    });
+
+    const getOptionsForPerformerSelection = (task) => {
+      const assignedNames = new Set((task.children || (task.child ? [{ name: task.child }] : [])).map(child => child.name));
+      const allChildren = [];
+      const seenNames = new Set();
+      const candidates = [
+        ...(task.children || []),
+        ...[...childrenById.values()].map(child => ({ name: child.name, color: child.color || '#4A90E2' }))
+      ];
+      candidates.forEach((child) => {
+        const name = child.name;
+        if (!name || seenNames.has(name)) return;
+        seenNames.add(name);
+        allChildren.push({
+          name,
+          color: child.color || childColors.get(name) || '#4A90E2'
+        });
+      });
+      if (!allChildren.length) {
+        allChildren.push({ name: 'Non attribuée', color: '#4A90E2' });
+      }
+      return allChildren.map((child) => ({
+        ...child,
+        checked: assignedNames.has(child.name) || (assignedNames.size === 0 && child.name === 'Non attribuée')
+      }));
+    };
+
+    const choosePerformer = (children, defaultSelected = []) => new Promise((resolve) => {
       resolvePerformerRequest = resolve;
-      performerSelect.innerHTML = children.map(child => `
-        <label class="performer-checkbox" style="--child-color: ${child.color || '#4A90E2'}">
-          <input type="checkbox" value="${child.name}" data-color="${child.color || '#4A90E2'}">
-          <span style="color: ${child.color || '#4A90E2'}">${child.name}</span>
-        </label>
-      `).join('');
+      const selectedNames = new Set(defaultSelected);
+      performerSelect.innerHTML = children.map(child => {
+        const isChecked = selectedNames.has(child.name) || child.checked;
+        return `
+          <label class="performer-checkbox" style="--child-color: ${child.color || '#4A90E2'}">
+            <input type="checkbox" value="${child.name}" data-color="${child.color || '#4A90E2'}" ${isChecked ? 'checked' : ''}>
+            <span style="color: ${child.color || '#4A90E2'}">${child.name}</span>
+          </label>
+        `;
+      }).join('');
       performerModal.removeAttribute('hidden');
       performerModal.classList.add('is-visible');
       performerSelect.querySelector('input')?.focus();
@@ -538,8 +606,11 @@
             <span class="task-date">Prévue le ${task.dueAt ? formatTaskDate(task.dueAt) : formatTaskDay(task.dueDay)}</span>
           </div>
           <div class="task-actions">
-            <input class="complete-checkbox" type="checkbox" ${task.completed ? 'checked' : ''}
-              onchange="completeTask('${taskId}', this.checked)" aria-label="Tâche terminée">
+            <label class="task-done-label">
+              <input class="complete-checkbox" data-task-id="${taskId}" type="checkbox" ${task.completed ? 'checked' : ''}
+                onchange="completeTask('${taskId}', this.checked)" aria-label="Tâche faite">
+              <span>Fait</span>
+            </label>
             <button class="delete-btn" onclick="deleteTask('${taskId}')" aria-label="Supprimer la tâche">&times;</button>
           </div>
         `;
@@ -723,12 +794,20 @@
         const children = task.children || (task.child ? [{ name: task.child }] : []);
         const alreadyCompleted = task.completedBy || [];
         const remainingChildren = children.filter(child => !alreadyCompleted.some(doneChild => doneChild.name === child.name));
-        const performers = remainingChildren.length > 1
-          ? await choosePerformer(remainingChildren)
-          : remainingChildren.length === 1
-            ? [{ name: remainingChildren[0].name, color: remainingChildren[0].color || childColors.get(remainingChildren[0].name) || '#4A90E2' }]
-            : [{ name: 'Non attribuée', color: '#4A90E2' }];
-        if (!performers.length) return;
+        const options = getOptionsForPerformerSelection(task);
+        const defaultSelection = remainingChildren.length ? remainingChildren.map(child => child.name) : (children.length ? children.map(child => child.name) : ['Non attribuée']);
+        const performers = !remainingChildren.length && children.length > 0
+          ? await choosePerformer(options, defaultSelection)
+          : remainingChildren.length > 1
+            ? await choosePerformer(options, defaultSelection)
+            : remainingChildren.length === 1
+              ? await choosePerformer(options, defaultSelection)
+              : [{ name: 'Non attribuée', color: '#4A90E2' }];
+        if (!performers || !performers.length) {
+          const checkbox = document.querySelector(`.complete-checkbox[data-task-id="${CSS.escape(id)}"]`);
+          if (checkbox) checkbox.checked = false;
+          return;
+        }
         const completedChildren = [...alreadyCompleted, ...performers];
         const completedAt = new Date();
         const isBedroomTask = task.title === 'Chambres';
@@ -751,6 +830,23 @@
           console.error('Impossible d\'enregistrer l\'historique :', error);
         }
         return;
+      }
+      const taskToReset = tasksById.get(id);
+      if (taskToReset && taskToReset.completed && !completed) {
+        const shouldCancel = await requestResetConfirmation('Cette tâche est déjà marquée comme faite. Voulez-vous vraiment l’annuler et supprimer son historique ?');
+        if (!shouldCancel) {
+          const checkbox = document.querySelector(`.complete-checkbox[data-task-id="${CSS.escape(id)}"]`);
+          if (checkbox) checkbox.checked = true;
+          return;
+        }
+        const historySnapshot = await get(ref(db, "history"));
+        const historyEntries = historySnapshot.val() || {};
+        const historyToRemove = Object.entries(historyEntries)
+          .filter(([, entry]) => entry.taskId === id)
+          .map(([historyId]) => historyId);
+        if (historyToRemove.length) {
+          await Promise.all(historyToRemove.map(historyId => remove(ref(db, `history/${historyId}`))));
+        }
       }
       await update(ref(db, `tasks/${id}`), {
         completed,
