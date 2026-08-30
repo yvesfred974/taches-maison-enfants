@@ -263,7 +263,6 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    // Date du jour
     const getDateKey = (date) => {
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -281,11 +280,13 @@
       'Ranger salon', 'Ranger vaiselle évier', 'Salle de bain Bas',
       'Salle de bain Haut', 'Toilette Bas', 'Toilette Haut', 'Vider poubelles'
     ].sort((firstTask, secondTask) => firstTask.localeCompare(secondTask, 'fr'));
+    
     const taskTemplate = document.getElementById('task-template');
     const customTaskList = document.getElementById('custom-task-list');
     const taskAssignments = document.getElementById('task-assignments');
     const otherTaskInput = document.getElementById('other-task');
     const customTasksById = new Map();
+
     const renderTaskTemplates = (customTasks = []) => {
       const allTasks = [...defaultTasks, ...customTasks
         .sort((firstTask, secondTask) => firstTask.title.localeCompare(secondTask.title, 'fr'))
@@ -300,6 +301,7 @@
       `).join('');
       taskTemplate.querySelectorAll('.task-choice-input').forEach(input => input.addEventListener('change', renderTaskAssignments));
     };
+
     const renderTaskAssignments = () => {
       const selectedTitles = [...taskTemplate.querySelectorAll('.task-choice-input:checked')].map(input => input.value);
       if (otherTaskInput.checked && document.getElementById('task-title').value.trim()) {
@@ -324,12 +326,12 @@
         });
       });
     };
+
     otherTaskInput.addEventListener('change', () => {
       document.getElementById('task-title').disabled = !otherTaskInput.checked;
       renderTaskAssignments();
     });
     document.getElementById('task-title').addEventListener('input', renderTaskAssignments);
-    renderTaskTemplates();
 
     onValue(ref(db, "taskTemplates"), (snapshot) => {
       const customTasks = Object.entries(snapshot.val() || {}).map(([id, task]) => ({ id, ...task }));
@@ -337,18 +339,15 @@
       customTasks.forEach(task => customTasksById.set(task.id, task));
       renderTaskTemplates(customTasks);
     });
-    const monthNames = [
-      'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
-      'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'
-    ];
 
+    const monthNames = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
     const daySelect = document.getElementById('task-due-day-number');
     const monthSelect = document.getElementById('task-due-month');
     const yearSelect = document.getElementById('task-due-year');
     daySelect.innerHTML = '<option value="">Jour</option>';
     monthSelect.innerHTML = '<option value="">Mois</option>';
     yearSelect.innerHTML = '<option value="">Année</option>';
-    for (let day = 1; day <= 31; day += 1) {
+    for (let day = 1; day <= 31; day++) {
       const formattedDay = String(day).padStart(2, '0');
       daySelect.innerHTML += `<option value="${formattedDay}">${formattedDay}</option>`;
     }
@@ -356,27 +355,25 @@
       const monthNumber = String(index + 1).padStart(2, '0');
       monthSelect.innerHTML += `<option value="${monthNumber}">${month}</option>`;
     });
-    for (let year = today.getFullYear(); year <= today.getFullYear() + 5; year += 1) {
+    for (let year = today.getFullYear(); year <= today.getFullYear() + 5; year++) {
       yearSelect.innerHTML += `<option value="${year}">${year}</option>`;
     }
     daySelect.value = String(today.getDate()).padStart(2, '0');
     monthSelect.value = String(today.getMonth() + 1).padStart(2, '0');
     yearSelect.value = String(today.getFullYear());
 
-    document.getElementById('current-date').textContent = today.toLocaleDateString('fr-FR', {
-      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
-    });
+    document.getElementById('current-date').textContent = today.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
     const hourSelect = document.getElementById('task-due-hour');
     hourSelect.innerHTML = '<option value="">--</option>';
-    for (let hour = 0; hour < 24; hour += 1) {
+    for (let hour = 0; hour < 24; hour++) {
       const formattedHour = String(hour).padStart(2, '0');
       hourSelect.innerHTML += `<option value="${formattedHour}">${formattedHour}</option>`;
     }
 
     const formatTaskDate = (dateValue) => {
       if (!dateValue) return 'Date non définie';
-      const date = dateValue.toDate ? dateValue.toDate() : new Date(dateValue);
+      const date = new Date(dateValue);
       const hours = String(date.getHours()).padStart(2, '0');
       const minutes = String(date.getMinutes()).padStart(2, '0');
       return `${date.toLocaleDateString('fr-FR')} à ${hours}h${minutes}`;
@@ -389,13 +386,11 @@
 
     const isCompletedToday = (task) => {
       if (!task.completed || !task.completedAt) return false;
-      const completedDate = task.completedAt.toDate ? task.completedAt.toDate() : new Date(task.completedAt);
+      const completedDate = new Date(task.completedAt);
       return getDateKey(completedDate) === todayKey;
     };
 
-    const millisecondsUntilMidnight = new Date(
-      today.getFullYear(), today.getMonth(), today.getDate() + 1
-    ).getTime() - today.getTime();
+    const millisecondsUntilMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1).getTime() - today.getTime();
     setTimeout(() => window.location.reload(), millisecondsUntilMidnight);
 
     const ACCESS_CODE = '0410';
@@ -437,15 +432,9 @@
         }
         if (!await hasAccessCode()) return;
         parentAccessPanels.add(toggle.dataset.panel);
-        panel.classList.toggle('open');
-        toggle.textContent = panel.classList.contains('open')
-          ? `🔓 Fermer la gestion (${toggle.dataset.label})`
-          : `🔒 Ouvrir la gestion (${toggle.dataset.label})`;
+        panel.classList.add('open');
+        toggle.textContent = `🔓 Fermer la gestion (${toggle.dataset.label})`;
       });
-    });
-    document.querySelector('.bottom-nav a[href="#children-panel"]').addEventListener('click', (event) => {
-      event.preventDefault();
-      document.querySelector('.parent-toggle[data-panel="children-panel"]').click();
     });
 
     const performerModal = document.getElementById('performer-modal');
@@ -463,15 +452,13 @@
       `).join('');
       performerModal.removeAttribute('hidden');
       performerModal.classList.add('is-visible');
-      performerSelect.querySelector('input')?.focus();
     });
 
     performerForm.addEventListener('submit', (event) => {
       event.preventDefault();
       performerModal.classList.remove('is-visible');
       performerModal.setAttribute('hidden', '');
-      const selectedPerformers = [...performerSelect.querySelectorAll('input:checked')]
-        .map(input => ({ name: input.value, color: input.dataset.color }));
+      const selectedPerformers = [...performerSelect.querySelectorAll('input:checked')].map(input => ({ name: input.value, color: input.dataset.color }));
       resolvePerformerRequest(selectedPerformers);
     });
 
@@ -493,18 +480,13 @@
       quickTaskSelect.innerHTML = '<option value="">-- Choisir une tâche --</option>' +
         allTaskTitles.map(t => `<option value="${t}">${t}</option>`).join('') +
         '<option value="custom">Autre tâche...</option>';
-      
       quickTaskPerformers.innerHTML = [...childrenById.values()].map(child => `
         <label class="performer-checkbox" style="--child-color: ${child.color || '#4A90E2'}">
           <input type="checkbox" value="${child.name}" data-color="${child.color || '#4A90E2'}">
           <span style="color: ${child.color || '#4A90E2'}">${child.name}</span>
-        </label>
-      `).join('');
-      
+        </label>`).join('');
       quickTaskCustom.style.display = 'none';
       quickTaskVehicle.style.display = 'none';
-      quickTaskCustom.value = '';
-      quickTaskVehicle.value = '';
       quickTaskForm.reset();
       quickTaskModal.removeAttribute('hidden');
       quickTaskModal.classList.add('is-visible');
@@ -513,7 +495,6 @@
     quickTaskSelect.addEventListener('change', () => {
       quickTaskCustom.style.display = quickTaskSelect.value === 'custom' ? 'block' : 'none';
       quickTaskVehicle.style.display = quickTaskSelect.value === 'Nettoyer voiture' ? 'block' : 'none';
-      if (quickTaskSelect.value === 'custom') quickTaskCustom.focus();
     });
 
     document.getElementById('cancel-quick-task').addEventListener('click', () => {
@@ -525,373 +506,165 @@
       event.preventDefault();
       const title = quickTaskSelect.value === 'custom' ? quickTaskCustom.value.trim() : quickTaskSelect.value;
       const vehicle = quickTaskSelect.value === 'Nettoyer voiture' ? quickTaskVehicle.value : null;
-      const performers = [...quickTaskPerformers.querySelectorAll('input:checked')]
-        .map(input => ({ name: input.value, color: input.dataset.color }));
-
-      if (!title || !performers.length) return;
-      if (quickTaskSelect.value === 'Nettoyer voiture' && !vehicle) {
-        alert('Merci de choisir une voiture.');
-        return;
-      }
-
+      const performers = [...quickTaskPerformers.querySelectorAll('input:checked')].map(input => ({ name: input.value, color: input.dataset.color }));
+      if (!title || !performers.length || (quickTaskSelect.value === 'Nettoyer voiture' && !vehicle)) return;
       quickTaskModal.classList.remove('is-visible');
       quickTaskModal.setAttribute('hidden', '');
-
       const completedAt = Date.now();
-      const newTaskRef = await push(ref(db, "tasks"), {
-        title,
-        vehicle,
-        children: performers,
-        dueDay: todayKey,
-        completed: true,
-        completedAt,
-        completedBy: performers,
-        createdAt: completedAt,
-        spontaneous: true
-      });
-
-      await Promise.all(performers.map(p => push(ref(db, "history"), {
-        taskId: newTaskRef.key,
-        taskTitle: title + (vehicle ? ` (${vehicle})` : ''),
-        childName: p.name,
-        childColor: p.color,
-        status: 'effectue',
-        completedAt
-      })));
+      const newTaskRef = await push(ref(db, "tasks"), { title, vehicle, children: performers, dueDay: todayKey, completed: true, completedAt, completedBy: performers, createdAt: completedAt, spontaneous: true });
+      await Promise.all(performers.map(p => push(ref(db, "history"), { taskId: newTaskRef.key, taskTitle: title + (vehicle ? ` (${vehicle})` : ''), childName: p.name, childColor: p.color, status: 'effectue', completedAt })));
     });
 
-    // ÉCOUTE EN TEMPS RÉEL : ENFANTS
     onValue(ref(db, "children"), (snapshot) => {
       const list = document.getElementById('children-list');
       list.innerHTML = '';
       childrenById.clear();
-
       Object.entries(snapshot.val() || {}).forEach(([childId, child]) => {
-        const color = child.color || '#4A90E2';
-        childColors.set(child.name, color);
+        childColors.set(child.name, child.color || '#4A90E2');
         childrenById.set(childId, child);
-        list.innerHTML += `<div class="child-tag" style="--child-color: ${color}">${child.name} <button type="button" onclick="editChild('${childId}')" aria-label="Modifier ${child.name}">&#9998;</button><button type="button" class="delete-btn" onclick="deleteChild('${childId}')" aria-label="Supprimer ${child.name}">&times;</button></div>`;
+        list.innerHTML += `<div class="child-tag" style="--child-color: ${child.color}">${child.name} <button type="button" onclick="editChild('${childId}')">&#9998;</button><button type="button" class="delete-btn" onclick="deleteChild('${childId}')">&times;</button></div>`;
       });
       renderTaskAssignments();
     });
 
-    // ÉCOUTE EN TEMPS RÉEL : TÂCHES
     const tasksById = new Map();
-    const archivingTasks = new Set();
-    const archiveOverdueTask = async (taskId, task) => {
-      if (task.archived || task.completed || archivingTasks.has(taskId) || !task.dueDay || task.dueDay >= todayKey) return;
-      archivingTasks.add(taskId);
-      const assignedChildren = task.children || (task.child ? [{ name: task.child }] : []);
-      const completedChildren = task.completedBy || [];
-      const remainingChildren = assignedChildren.filter(child => !completedChildren.some(doneChild => doneChild.name === child.name));
-      const overdueChildren = remainingChildren.length ? remainingChildren : [{ name: 'Non attribuée', color: '#4A90E2' }];
-      const archivedAt = Date.now();
-      try {
-        await Promise.all(overdueChildren.map(child => push(ref(db, "history"), {
-          taskId,
-          taskTitle: task.title,
-          childName: child.name,
-          childColor: child.color || '#4A90E2',
-          status: 'non-effectue',
-          completedAt: archivedAt
-        })));
-        await update(ref(db, `tasks/${taskId}`), { archived: true, archivedAt });
-      } finally {
-        archivingTasks.delete(taskId);
-      }
-    };
     onValue(ref(db, "tasks"), (snapshot) => {
       const pendingContainer = document.getElementById('pending-tasks');
       const completedContainer = document.getElementById('completed-tasks');
-      pendingContainer.innerHTML = '';
-      completedContainer.innerHTML = '';
+      pendingContainer.innerHTML = ''; completedContainer.innerHTML = '';
       let futureTaskCount = 0;
-
       Object.entries(snapshot.val() || {}).forEach(([taskId, task]) => {
         tasksById.set(taskId, task);
-
-        archiveOverdueTask(taskId, task);
-
-        if (!task.completed && task.dueDay && task.dueDay > todayKey) {
-          futureTaskCount += 1;
-          return;
-        }
-        if (!task.completed && task.dueDay && task.dueDay < todayKey) return;
-
-        // Les tâches terminées restent visibles barrées jusqu'au prochain jour.
-        if (task.archived || task.completed && !isCompletedToday(task)) return;
-
+        if (!task.completed && task.dueDay > todayKey) { futureTaskCount++; return; }
+        if (task.archived || (task.completed && !isCompletedToday(task))) return;
         const el = document.createElement('div');
         el.className = `task-item ${task.completed ? 'completed-item' : ''}`;
-        const assignedChildren = task.children || (task.child ? [{ name: task.child, color: childColors.get(task.child) || '#4A90E2' }] : []);
-        const completedChildren = task.completedBy || [];
-        const taskChildren = task.completed
-          ? completedChildren
-          : assignedChildren.filter(child => !completedChildren.some(doneChild => doneChild.name === child.name));
-        const taskColors = taskChildren.map(child => child.color || '#4A90E2');
-        const colorBar = taskColors.map(color => `<span class="task-color" style="background-color: ${color}"></span>`).join('');
-
+        const taskChildren = task.completed ? (task.completedBy || []) : (task.children || []);
+        const colorBar = taskChildren.map(c => `<span class="task-color" style="background-color: ${c.color || '#4A90E2'}"></span>`).join('');
         el.innerHTML = `
-          <div class="task-color-bar" aria-hidden="true">${colorBar}</div>
+          <div class="task-color-bar">${colorBar}</div>
           <div class="task-info">
             <strong>${task.title}${task.vehicle ? ` (${task.vehicle})` : ''}</strong>
-            <small>${task.completed ? 'Fait par' : 'Pour'} : ${taskChildren.map(child => `<span class="task-child-name" style="color: ${child.color || '#4A90E2'}">${child.name}</span>`).join(', ') || 'Non attribuée'}</small>
+            <small>${task.completed ? 'Fait par' : 'Pour'} : ${taskChildren.map(c => `<span class="task-child-name" style="color: ${c.color}">${c.name}</span>`).join(', ')}</small>
             <span class="task-date">Prévue le ${task.dueAt ? formatTaskDate(task.dueAt) : formatTaskDay(task.dueDay)}</span>
           </div>
           <div class="task-actions">
-            <input class="complete-checkbox" type="checkbox" ${task.completed ? 'checked' : ''}
-              onchange="completeTask('${taskId}', this.checked)" aria-label="Tâche terminée">
-            <button class="delete-btn" onclick="deleteTask('${taskId}')" aria-label="Supprimer la tâche">&times;</button>
-          </div>
-        `;
-
-        if (task.completed) {
-          completedContainer.appendChild(el);
-        } else {
-          pendingContainer.appendChild(el);
-        }
+            <input class="complete-checkbox" type="checkbox" ${task.completed ? 'checked' : ''} onchange="completeTask('${taskId}', this.checked)">
+            <button class="delete-btn" onclick="deleteTask('${taskId}')">&times;</button>
+          </div>`;
+        (task.completed ? completedContainer : pendingContainer).appendChild(el);
       });
-      const futureReminder = document.getElementById('future-reminder');
-      futureReminder.style.display = futureTaskCount ? 'block' : 'none';
-      futureReminder.textContent = futureTaskCount
-        ? `${futureTaskCount} tâche${futureTaskCount > 1 ? 's' : ''} prévue${futureTaskCount > 1 ? 's' : ''} pour un autre jour apparaîtra${futureTaskCount > 1 ? 'ont' : ''} à la bonne date.`
-        : '';
+      const reminder = document.getElementById('future-reminder');
+      reminder.style.display = futureTaskCount ? 'block' : 'none';
+      reminder.textContent = futureTaskCount ? `${futureTaskCount} tâche(s) prévue(s) pour un autre jour.` : '';
     });
 
     onValue(ref(db, "history"), (snapshot) => {
       const historyContent = document.getElementById('history-content');
       const totals = new Map();
       Object.entries(snapshot.val() || {}).forEach(([historyId, entry]) => {
-        const completedDate = entry.completedAt ? new Date(entry.completedAt) : new Date();
+        const completedDate = new Date(entry.completedAt || Date.now());
         const monthKey = `${completedDate.getFullYear()}-${String(completedDate.getMonth() + 1).padStart(2, '0')}`;
         const key = `${monthKey}|${entry.childName}|${entry.taskTitle}|${entry.status || 'effectue'}`;
         const current = totals.get(key);
-        if (!current || completedDate.getTime() > new Date(current.completedAt || 0).getTime()) {
+        if (!current || completedDate.getTime() > new Date(current.completedAt).getTime()) {
           totals.set(key, { ...entry, historyId, monthKey, count: (current?.count || 0) + 1 });
-        } else {
-          current.count += 1;
-        }
+        } else { current.count++; }
       });
-
-      if (!totals.size) {
-        historyContent.className = 'history-empty';
-        historyContent.textContent = 'Aucune tâche réalisée pour le moment.';
-        return;
-      }
-
+      if (!totals.size) { historyContent.className = 'history-empty'; historyContent.textContent = 'Aucune tâche réalisée.'; return; }
       historyContent.className = '';
       const currentMonthKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
-      const monthGroups = new Map();
-      [...totals.values()].forEach((entry) => {
-        if (!monthGroups.has(entry.monthKey)) monthGroups.set(entry.monthKey, []);
-        monthGroups.get(entry.monthKey).push(entry);
-      });
-      historyContent.innerHTML = [...monthGroups.entries()]
-        .sort(([firstMonth], [secondMonth]) => secondMonth.localeCompare(firstMonth))
-        .map(([monthKey, entries]) => {
-          const monthDate = new Date(`${monthKey}-01T00:00:00`);
-          const monthLabel = monthDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
-          return `
-            <details class="history-month" ${monthKey === currentMonthKey ? 'open' : ''}>
-              <summary>${monthLabel}</summary>
-              <table class="history-table">
-                <thead><tr><th>Enfant</th><th>Tâche</th><th>Résultat</th><th>Dernière fois</th><th>Fois</th><th></th></tr></thead>
-                <tbody>${entries.map(entry => `
-                  <tr><td>${entry.childName}</td><td>${entry.taskTitle}</td><td>${entry.status === 'non-effectue' ? 'NON EFFECTUÉ' : 'Effectué'}</td><td>${formatTaskDate(entry.completedAt)}</td><td class="history-count">${entry.count}</td><td><button class="history-delete" onclick="deleteHistory('${entry.historyId}')" aria-label="Supprimer cette entrée de l'historique">&times;</button></td></tr>
-                `).join('')}</tbody>
-              </table>
-            </details>
-          `;
-        }).join('');
+      const groups = new Map();
+      [...totals.values()].forEach(e => { if (!groups.has(e.monthKey)) groups.set(e.monthKey, []); groups.get(e.monthKey).push(e); });
+      historyContent.innerHTML = [...groups.entries()].sort((a, b) => b[0].localeCompare(a[0])).map(([mKey, entries]) => `
+        <details class="history-month" ${mKey === currentMonthKey ? 'open' : ''}>
+          <summary>${new Date(`${mKey}-01`).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}</summary>
+          <table class="history-table">
+            <thead><tr><th>Enfant</th><th>Tâche</th><th>Résultat</th><th>Dernière fois</th><th>Fois</th><th></th></tr></thead>
+            <tbody>${entries.map(e => `<tr><td>${e.childName}</td><td>${e.taskTitle}</td><td>${e.status === 'non-effectue' ? 'NON EFFECTUÉ' : 'Effectué'}</td><td>${formatTaskDate(e.completedAt)}</td><td class="history-count">${e.count}</td><td><button class="history-delete" onclick="deleteHistory('${e.historyId}')">&times;</button></td></tr>`).join('')}</tbody>
+          </table>
+        </details>`).join('');
     });
 
-    // ACTIONS BASE DE DONNÉES
     window.addChild = async () => {
       const input = document.getElementById('child-name');
       const colorInput = document.getElementById('child-color');
       if (input.value.trim() && parentAccessPanels.has('children-panel')) {
         await push(ref(db, "children"), { name: input.value.trim(), color: colorInput.value });
-        input.value = '';
-        colorInput.value = '#4A90E2';
+        input.value = ''; colorInput.value = '#4A90E2';
       }
     };
 
-    window.deleteChild = async (id) => {
-      if (parentAccessPanels.has('children-panel')) {
-        await remove(ref(db, `children/${id}`));
-      }
-    };
+    window.deleteChild = async (id) => { if (parentAccessPanels.has('children-panel')) await remove(ref(db, `children/${id}`)); };
 
     const childEditModal = document.getElementById('child-edit-modal');
-    const childEditForm = document.getElementById('child-edit-form');
     let childBeingEdited;
-
     window.editChild = (id) => {
-      const child = childrenById.get(id);
-      if (!child) return;
+      const child = childrenById.get(id); if (!child) return;
       childBeingEdited = id;
       document.getElementById('edit-child-name').value = child.name;
       document.getElementById('edit-child-color').value = child.color || '#4A90E2';
-      childEditModal.removeAttribute('hidden');
-      childEditModal.classList.add('is-visible');
-      document.getElementById('edit-child-name').focus();
+      childEditModal.removeAttribute('hidden'); childEditModal.classList.add('is-visible');
     };
 
-    childEditForm.addEventListener('submit', async (event) => {
-      event.preventDefault();
-      if (!parentAccessPanels.has('children-panel')) return;
-      const updatedName = document.getElementById('edit-child-name').value.trim();
-      const updatedColor = document.getElementById('edit-child-color').value;
-      childEditModal.classList.remove('is-visible');
-      childEditModal.setAttribute('hidden', '');
-      await update(ref(db, `children/${childBeingEdited}`), {
-        name: updatedName,
-        color: updatedColor
-      });
-    });
-
-    document.getElementById('cancel-child-edit').addEventListener('click', () => {
-      childEditModal.classList.remove('is-visible');
-      childEditModal.setAttribute('hidden', '');
+    document.getElementById('child-edit-form').addEventListener('submit', async (e) => {
+      e.preventDefault(); if (!parentAccessPanels.has('children-panel')) return;
+      await update(ref(db, `children/${childBeingEdited}`), { name: document.getElementById('edit-child-name').value.trim(), color: document.getElementById('edit-child-color').value });
+      childEditModal.classList.remove('is-visible'); childEditModal.setAttribute('hidden', '');
     });
 
     window.createTasks = async () => {
-      const customTitleInput = document.getElementById('task-title');
-      const dueHourInput = document.getElementById('task-due-hour');
-      const dueMinuteInput = document.getElementById('task-due-minute');
-      const hasHour = dueHourInput.value && dueMinuteInput.value;
-      const hasPartialHour = dueHourInput.value || dueMinuteInput.value;
+      const titleInput = document.getElementById('task-title');
       const dueDay = `${yearSelect.value}-${monthSelect.value}-${daySelect.value}`;
-      const selectedTitles = [...taskTemplate.querySelectorAll('.task-choice-input:checked')].map(input => input.value);
-      if (otherTaskInput.checked && customTitleInput.value.trim()) selectedTitles.push(customTitleInput.value.trim());
-      const isValidDate = new Date(`${dueDay}T00:00:00`).getDate() === Number(daySelect.value);
-      if (!selectedTitles.length || !isValidDate || (hasPartialHour && !hasHour)) return;
-      const tasks = [...taskAssignments.querySelectorAll('.task-assignment')];
-      if (tasks.length !== selectedTitles.length) return;
-      if (!tasks.every(task => task.querySelectorAll('.assignment-child-input:checked').length)) return;
-      if (tasks.some(task => task.dataset.taskTitle === 'Nettoyer voiture'
-        && !task.querySelector('.assignment-vehicle')?.value)) return;
-      if (!parentAccessPanels.has('tasks-panel')) return;
-      for (const assignment of tasks) {
-        const title = assignment.dataset.taskTitle;
-        const isCustomTask = !defaultTasks.includes(title);
-        if (isCustomTask && ![...customTasksById.values()].some(template => template.title === title)) {
-          await push(ref(db, "taskTemplates"), { title });
-        }
-        const vehicle = assignment.querySelector('.assignment-vehicle')?.value || null;
-        await push(ref(db, "tasks"), {
-          title,
-          vehicle,
-          children: [...assignment.querySelectorAll('.assignment-child-input:checked')].map(input => ({ name: input.value, color: input.dataset.color })),
-          dueDay,
-          dueAt: hasHour ? new Date(`${dueDay}T${dueHourInput.value}:${dueMinuteInput.value}`).getTime() : null,
-          completed: false,
-          createdAt: Date.now()
-        });
+      const hour = document.getElementById('task-due-hour').value;
+      const min = document.getElementById('task-due-minute').value;
+      const selectedTitles = [...taskTemplate.querySelectorAll('.task-choice-input:checked')].map(i => i.value);
+      if (otherTaskInput.checked && titleInput.value.trim()) selectedTitles.push(titleInput.value.trim());
+      const assignments = [...taskAssignments.querySelectorAll('.task-assignment')];
+      if (!selectedTitles.length || !parentAccessPanels.has('tasks-panel')) return;
+      for (const assign of assignments) {
+        const title = assign.dataset.taskTitle;
+        const vehicle = assign.querySelector('.assignment-vehicle')?.value || null;
+        const children = [...assign.querySelectorAll('.assignment-child-input:checked')].map(i => ({ name: i.value, color: i.dataset.color }));
+        if (children.length) await push(ref(db, "tasks"), { title, vehicle, children, dueDay, dueAt: hour && min ? new Date(`${dueDay}T${hour}:${min}`).getTime() : null, completed: false, createdAt: Date.now() });
       }
-      taskTemplate.querySelectorAll('input').forEach(input => { input.checked = false; });
-      otherTaskInput.checked = false;
-      customTitleInput.value = '';
-      renderTaskAssignments();
+      taskTemplate.querySelectorAll('input').forEach(i => i.checked = false);
+      otherTaskInput.checked = false; titleInput.value = ''; renderTaskAssignments();
     };
 
     window.deleteTask = async (id) => {
       if (await hasAccessCode()) {
         await remove(ref(db, `tasks/${id}`));
-        const historySnapshot = await get(query(ref(db, "history"), orderByChild("taskId"), equalTo(id)));
-        if (historySnapshot.exists()) {
-          const updates = {};
-          Object.keys(historySnapshot.val()).forEach(key => {
-            updates[`history/${key}`] = null;
-          });
+        const snap = await get(query(ref(db, "history"), orderByChild("taskId"), equalTo(id)));
+        if (snap.exists()) {
+          const updates = {}; Object.keys(snap.val()).forEach(k => updates[`history/${k}`] = null);
           await update(ref(db), updates);
         }
       }
     };
 
-    window.deleteTaskTemplate = async (id) => {
-      if (parentAccessPanels.has('tasks-panel')) {
-        await remove(ref(db, `taskTemplates/${id}`));
-        const deletedTitle = customTasksById.get(id)?.title;
-        taskTemplate.querySelectorAll('.task-choice-input').forEach((input) => {
-          if (input.value === deletedTitle) input.checked = false;
-        });
-        renderTaskAssignments();
-      }
-    };
-
-    window.deleteHistory = async (id) => {
-      if (await hasAccessCode()) {
-        await remove(ref(db, `history/${id}`));
-      }
-    };
+    window.deleteHistory = async (id) => { if (await hasAccessCode()) await remove(ref(db, `history/${id}`)); };
 
     window.completeTask = async (id, completed) => {
-      const task = tasksById.get(id);
-      if (!task) return;
-
+      const task = tasksById.get(id); if (!task) return;
       if (completed) {
-        const children = task.children || (task.child ? [{ name: task.child }] : []);
-        const alreadyCompleted = task.completedBy || [];
-        const remainingChildren = children.filter(child => !alreadyCompleted.some(doneChild => doneChild.name === child.name));
-        const performers = remainingChildren.length > 1
-          ? await choosePerformer(remainingChildren)
-          : remainingChildren.length === 1
-            ? [{ name: remainingChildren[0].name, color: remainingChildren[0].color || childColors.get(remainingChildren[0].name) || '#4A90E2' }]
-            : [{ name: 'Non attribuée', color: '#4A90E2' }];
-        
-        if (!performers || !performers.length) {
-          // Si on a annulé le choix du performer, on décoche la case
-          const checkbox = document.querySelector(`.complete-checkbox[onchange*="'${id}'"]`);
-          if (checkbox) checkbox.checked = false;
-          return;
-        }
-
-        const completedChildren = [...alreadyCompleted, ...performers];
-        const completedAt = Date.now();
-        const isBedroomTask = task.title === 'Chambres';
-        const isFullyCompleted = !isBedroomTask || completedChildren.length >= children.length;
-        
-        await update(ref(db, `tasks/${id}`), {
-          completed: isFullyCompleted,
-          completedAt: isFullyCompleted ? completedAt : null,
-          completedBy: completedChildren
-        });
-
-        try {
-          await Promise.all(performers.map(performer => push(ref(db, "history"), {
-            taskId: id,
-            taskTitle: task.title + (task.vehicle ? ` (${task.vehicle})` : ''),
-            childName: performer.name,
-            childColor: performer.color,
-            status: 'effectue',
-            completedAt: completedAt
-          })));
-        } catch (error) {
-          console.error('Impossible d\'enregistrer l\'historique :', error);
-        }
+        const children = task.children || [];
+        const already = task.completedBy || [];
+        const remaining = children.filter(c => !already.some(done => done.name === c.name));
+        const performers = remaining.length > 1 ? await choosePerformer(remaining) : (remaining.length === 1 ? remaining : [{ name: 'Non attribuée', color: '#4A90E2' }]);
+        if (!performers || !performers.length) { document.querySelector(`.complete-checkbox[onchange*="'${id}'"]`).checked = false; return; }
+        const allDone = [...already, ...performers];
+        const at = Date.now();
+        const isFull = task.title !== 'Chambres' || allDone.length >= children.length;
+        await update(ref(db, `tasks/${id}`), { completed: isFull, completedAt: isFull ? at : null, completedBy: allDone });
+        await Promise.all(performers.map(p => push(ref(db, "history"), { taskId: id, taskTitle: task.title + (task.vehicle ? ` (${task.vehicle})` : ''), childName: p.name, childColor: p.color, status: 'effectue', completedAt: at })));
       } else {
-        // Décochage : on retire de l'historique et on reset la tâche
-        if (task.spontaneous) {
-          // Si c'est une tâche ajoutée manuellement (spontanée), on la supprime carrément
-          await deleteTask(id);
-        } else {
-          // Sinon on reset juste le statut complété
-          await update(ref(db, `tasks/${id}`), {
-            completed: false,
-            completedAt: null,
-            completedBy: []
-          });
-          
-          // Et on supprime les entrées "effectue" de l'historique pour cette tâche
-          const historySnapshot = await get(query(ref(db, "history"), orderByChild("taskId"), equalTo(id)));
-          if (historySnapshot.exists()) {
-            const updates = {};
-            Object.entries(historySnapshot.val()).forEach(([key, entry]) => {
-              if (entry.status === 'effectue') {
-                updates[`history/${key}`] = null;
-              }
-            });
+        if (task.spontaneous) await deleteTask(id);
+        else {
+          await update(ref(db, `tasks/${id}`), { completed: false, completedAt: null, completedBy: [] });
+          const snap = await get(query(ref(db, "history"), orderByChild("taskId"), equalTo(id)));
+          if (snap.exists()) {
+            const updates = {}; Object.entries(snap.val()).forEach(([k, v]) => { if (v.status === 'effectue') updates[`history/${k}`] = null; });
             await update(ref(db), updates);
           }
         }
